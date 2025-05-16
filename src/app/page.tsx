@@ -1,17 +1,39 @@
 
+"use client"; // Required for useRouter and useEffect
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, TrendingUp, FileText, Users, ArrowUpRight, ArrowDownRight, Activity, BarChart3 } from "lucide-react";
+import { DollarSign, TrendingUp, FileText, Users, ArrowUpRight, ArrowDownRight, Activity, BarChart3, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 const kpiData = [
   { title: "Total Revenue", value: "$45,231.89", change: "+20.1%", icon: DollarSign, trend: "up" as const, note: "from last month" },
-  { title: "Total Expenses", value: "$12,105.32", change: "-5.3%", icon: TrendingUp, trend: "down" as const, note: "from last month" }, // Assuming expenses going down is good.
+  { title: "Total Expenses", value: "$12,105.32", change: "-5.3%", icon: TrendingUp, trend: "down" as const, note: "from last month" },
   { title: "Pending Invoices", value: "12", subValue: "$5,600.00", icon: FileText, note: "outstanding" },
   { title: "Active Clients", value: "27", change: "+3", icon: Users, trend: "up" as const, note: "since last month" },
 ];
 
 export default function DashboardPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  if (loading || !user) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -61,7 +83,6 @@ export default function DashboardPage() {
             <CardDescription>Overview of your latest financial activities.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for recent transactions list or chart */}
             <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-md">
               <Activity className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-muted-foreground">No recent transactions to display.</p>
@@ -77,7 +98,6 @@ export default function DashboardPage() {
             <CardDescription>Monthly income vs. expenses.</CardDescription>
           </CardHeader>
           <CardContent>
-            {/* Placeholder for cash flow chart */}
              <div className="flex flex-col items-center justify-center h-40 border-2 border-dashed rounded-md">
               <BarChart3 className="h-10 w-10 text-muted-foreground mb-2" />
               <p className="text-muted-foreground">Cash flow chart coming soon.</p>

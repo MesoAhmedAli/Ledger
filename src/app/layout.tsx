@@ -1,8 +1,10 @@
+
 import type { Metadata } from 'next';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import './globals.css';
 import { AppShell } from '@/components/layout/app-shell';
+import { AuthProvider } from '@/contexts/AuthContext'; // Added AuthProvider
 
 export const metadata: Metadata = {
   title: 'Ledger Lite',
@@ -20,7 +22,9 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className={`font-sans antialiased`}>
-        <AppShell>{children}</AppShell>
+        <AuthProvider> {/* Wrapped with AuthProvider */}
+          <AppShell>{children}</AppShell>
+        </AuthProvider>
       </body>
     </html>
   );
