@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Loader2, Lightbulb } from "lucide-react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -26,11 +27,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { DatePicker } from "@/components/ui/date-picker";
-import { PREDEFINED_EXPENSE_CATEGORIES, type ExpenseCategoryValue } from "@/config/expense-categories";
+import { PREDEFINED_EXPENSE_CATEGORIES } from "@/config/expense-categories";
 import { smartCategorization, type SmartCategorizationInput } from "@/ai/flows/smart-categorization";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { db, auth } from "@/lib/firebase/config";
+import { useAuth } from "@/contexts/AuthContext";
 
 const expenseSchema = z.object({
   date: z.date({
@@ -46,6 +49,7 @@ type ExpenseFormValues = z.infer<typeof expenseSchema>;
 
 export function ExpenseForm() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuggestingCategories, setIsSuggestingCategories] = React.useState(false);
   const [suggestedCategories, setSuggestedCategories] = React.useState<string[]>([]);
@@ -57,21 +61,48 @@ export function ExpenseForm() {
       amount: 0,
       category: "",
       vendor: "",
+      date: new Date(), // Default to today's date
     },
   });
 
   async function onSubmit(data: ExpenseFormValues) {
+    if (!user) {
+      toast({
+        title: "Authentication Error",
+        description: "You must be logged in to add an expense.",
+        variant: "destructive",
+      });
+      return;
+    }
     setIsSubmitting(true);
-    console.log("Expense data:", data);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    toast({
-      title: "Expense Added",
-      description: `Expense "${data.description}" for $${data.amount} has been recorded.`,
-    });
-    form.reset();
-    setSuggestedCategories([]);
-    setIsSubmitting(false);
+    try {
+      await addDoc(collection(db, "expenses"), {
+        ...data,
+        userId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      toast({
+        title: "Expense Added",
+        description: `Expense "${data.description}" for $${data.amount} has been recorded.`,
+      });
+      form.reset({
+        description: "",
+        amount: 0,
+        category: "",
+        vendor: "",
+        date: new Date(),
+      });
+      setSuggestedCategories([]);
+    } catch (error) {
+      console.error("Error adding expense:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add expense. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   async function handleSuggestCategories() {
@@ -92,7 +123,6 @@ export function ExpenseForm() {
       const result = await smartCategorization(input);
       if (result.suggestedCategories && result.suggestedCategories.length > 0) {
         setSuggestedCategories(result.suggestedCategories);
-        // Optionally, auto-select the first category if it's a predefined one
         const firstSuggestionAsPredefined = PREDEFINED_EXPENSE_CATEGORIES.find(
           cat => cat.label.toLowerCase() === result.suggestedCategories[0].toLowerCase() ||
                  cat.value.toLowerCase() === result.suggestedCategories[0].toLowerCase()
@@ -174,7 +204,7 @@ export function ExpenseForm() {
                     name="category"
                     render={({ field }) => (
                       <FormItem className="flex-grow">
-                        <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger id="category">
                               <SelectValue placeholder="Select a category" />
@@ -219,13 +249,12 @@ export function ExpenseForm() {
                     return (
                       <Badge
                         key={index}
-                        variant="outline"
+                        variant={form.getValues("category") === predefinedCategory?.value ? "default" : "outline"}
                         className="cursor-pointer hover:bg-accent hover:text-accent-foreground"
                         onClick={() => {
                           if (predefinedCategory) {
                             form.setValue("category", predefinedCategory.value, { shouldValidate: true });
                           } else {
-                             // If not predefined, you might want to handle adding new categories or just inform user
                              toast({ title: "Custom Category", description: `"${suggestion}" is not a predefined category. Select "Other" or add it if functionality exists.`});
                           }
                         }}
@@ -245,7 +274,7 @@ export function ExpenseForm() {
                 <FormItem>
                   <FormLabel>Amount</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0.00" {...field} step="0.01" />
+                    <Input type="number" placeholder="0.00" {...field} step="0.01" min="0" />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -267,7 +296,7 @@ export function ExpenseForm() {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={isSubmitting || isSuggestingCategories} className="w-full sm:w-auto">
+            <Button type="submit" disabled={isSubmitting || isSuggestingCategories || !user} className="w-full sm:w-auto">
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -283,3 +312,5 @@ export function ExpenseForm() {
     </Card>
   );
 }
+
+    
