@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,7 +29,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { PREDEFINED_EXPENSE_CATEGORIES, type ExpenseCategoryValue } from "@/config/expense-categories";
 import { smartCategorization, type SmartCategorizationInput } from "@/ai/flows/smart-categorization";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 const expenseSchema = z.object({
@@ -127,7 +126,7 @@ export function ExpenseForm() {
     <Card className="w-full max-w-2xl mx-auto shadow-lg">
       <CardHeader>
         <CardTitle className="text-2xl">Add New Expense</CardTitle>
-        <FormDescription>Fill in the details of your business expense.</FormDescription>
+        <CardDescription>Fill in the details of your business expense.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
